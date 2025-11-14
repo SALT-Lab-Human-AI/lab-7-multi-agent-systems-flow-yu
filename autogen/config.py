@@ -123,6 +123,12 @@ class AgentConfig:
         "temperature": 0.7,
     }
 
+    GO_TO_MARKET_AGENT = {
+        "name": "GoToMarketAgent",
+        "role": "Go-To-Market Strategist",
+        "temperature": 0.7,
+    }
+
     @classmethod
     def get_agent_config(cls, agent_type: str) -> Dict[str, Any]:
         """Get configuration for a specific agent type"""
@@ -131,6 +137,7 @@ class AgentConfig:
             "analysis": cls.ANALYSIS_AGENT,
             "blueprint": cls.BLUEPRINT_AGENT,
             "reviewer": cls.REVIEWER_AGENT,
+            "go_to_market": cls.GO_TO_MARKET_AGENT,
         }
         return agents.get(agent_type, {})
 
@@ -144,6 +151,7 @@ class WorkflowConfig:
         "analysis",
         "blueprint",
         "review",
+        "go_to_market",
     ]
 
     # Phase descriptions
@@ -152,6 +160,7 @@ class WorkflowConfig:
         "analysis": "Market Gap Analysis & Opportunities",
         "blueprint": "Product Blueprint Creation",
         "review": "Strategic Review & Recommendations",
+        "go_to_market": "Go-To-Market Strategy & Launch Planning",
     }
 
     # Task descriptions
@@ -160,6 +169,7 @@ class WorkflowConfig:
         "analysis": "Identify 3 key market opportunities and gaps",
         "blueprint": "Create product blueprint with features and user flows",
         "review": "Review blueprint and provide strategic recommendations",
+        "go_to_market": "Develop launch plan, channels, and success metrics",
     }
 
     @classmethod
