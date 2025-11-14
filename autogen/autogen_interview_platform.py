@@ -1,7 +1,7 @@
 """
 AutoGen Multi-Agent Workflow: AI-Powered Interview Platform Product Plan
 
-This script implements a four-agent collaborative workflow to build a comprehensive
+This script implements a five-agent collaborative workflow to build a comprehensive
 product plan for an AI-powered interview platform using Microsoft's AutoGen framework.
 
 Agents:
@@ -9,6 +9,7 @@ Agents:
 2. AnalysisAgent: Product analyst identifying market gaps and opportunities
 3. BlueprintAgent: Product designer creating features and user flows
 4. ReviewerAgent: Product reviewer suggesting improvements and next steps
+5. GoToMarketAgent: GTM strategist outlining launch and growth strategy
 
 Configuration:
 - Uses shared configuration from parent directory (.env and shared_config.py)
@@ -175,6 +176,33 @@ class InterviewPlatformAgents:
         self.agents["reviewer"] = agent
         return agent
 
+    def create_go_to_market_agent(self) -> autogen.ConversableAgent:
+        """
+        GoToMarketAgent: GTM Strategist
+        Role: Build launch roadmap and growth plan
+        """
+        system_message = """You are a go-to-market strategist for B2B SaaS products.
+        Based on the blueprint and reviewer feedback, your task is to create a launch plan:
+
+        1. Launch objectives (quantitative + qualitative)
+        2. Target segments and messaging pillars
+        3. Channel and campaign strategy (owned/paid/partner)
+        4. 90-day activation timeline with milestones
+        5. Key metrics and instrumentation requirements
+        6. Resource & budget considerations
+
+        Provide a structured go-to-market plan with concise bullet points for each section."""
+
+        agent = autogen.ConversableAgent(
+            name="GoToMarketAgent",
+            system_message=system_message,
+            llm_config={"config_list": self.config_list, "temperature": 0.7},
+            human_input_mode="NEVER",
+        )
+
+        self.agents["go_to_market"] = agent
+        return agent
+
 
 # ============================================================================
 # WORKFLOW EXECUTION
@@ -296,8 +324,37 @@ class InterviewPlatformWorkflow:
 
         return review_output
 
+    def develop_go_to_market_phase(self, blueprint_output: str, review_output: str) -> str:
+        """Create GTM strategy based on blueprint and review"""
+        print("\n" + "="*80)
+        print("PHASE 5: GO-TO-MARKET STRATEGY")
+        print("="*80)
+
+        gtm_agent = self.agents_manager.agents["go_to_market"]
+
+        gtm_message = f"""Using the product blueprint and reviewer recommendations below,
+        craft a go-to-market plan for launching the AI-powered interview platform:
+
+        PRODUCT BLUEPRINT:
+        {blueprint_output}
+
+        REVIEWER RECOMMENDATIONS:
+        {review_output}
+
+        Provide launch objectives, GTM strategy, 90-day timeline, metrics, and resource needs."""
+
+        gtm_output = gtm_agent.generate_reply(
+            messages=[{"content": gtm_message, "role": "user"}]
+        )
+
+        print("\nGo-To-Market Agent Output:")
+        print(gtm_output)
+        self.outputs["gtm"] = gtm_output
+
+        return gtm_output
+
     def execute_workflow(self) -> Dict[str, str]:
-        """Execute the complete four-phase workflow"""
+        """Execute the complete five-phase workflow"""
         print("\n" + "="*80)
         print("AI-POWERED INTERVIEW PLATFORM - PRODUCT PLANNING WORKFLOW")
         print("="*80)
@@ -314,6 +371,9 @@ class InterviewPlatformWorkflow:
 
         # Phase 4: Review
         review_output = self.conduct_review_phase(blueprint_output)
+
+        # Phase 5: Go-to-Market Planning
+        self.develop_go_to_market_phase(blueprint_output, review_output)
 
         return self.outputs
 
@@ -360,6 +420,11 @@ class OutputManager:
             f.write("-"*80 + "\n")
             f.write(outputs.get("review", "No review output") + "\n\n")
 
+            # Go-To-Market Phase
+            f.write("PHASE 5: GO-TO-MARKET STRATEGY\n")
+            f.write("-"*80 + "\n")
+            f.write(outputs.get("gtm", "No go-to-market output") + "\n\n")
+
         return output_file
 
     def create_summary(self, outputs: Dict[str, str]) -> str:
@@ -376,13 +441,15 @@ class OutputManager:
             f.write("✓ Market Research & Competitive Analysis\n")
             f.write("✓ Market Gap & Opportunity Identification\n")
             f.write("✓ Product Blueprint Creation\n")
-            f.write("✓ Strategic Review & Recommendations\n\n")
+            f.write("✓ Strategic Review & Recommendations\n")
+            f.write("✓ Go-to-Market Strategy & Launch Planning\n\n")
 
             f.write("KEY DELIVERABLES:\n")
             f.write("1. Competitive landscape analysis\n")
             f.write("2. Three identified market opportunities\n")
             f.write("3. Product features and user journey\n")
-            f.write("4. Strategic recommendations and next steps\n\n")
+            f.write("4. Strategic recommendations and next steps\n")
+            f.write("5. Go-to-market launch strategy\n\n")
 
             f.write("All outputs saved in workflow_outputs_{}.txt\n".format(self.timestamp))
 
@@ -424,6 +491,9 @@ def main():
 
         agents_manager.create_reviewer_agent()
         print("✓ ReviewerAgent created")
+
+        agents_manager.create_go_to_market_agent()
+        print("✓ GoToMarketAgent created")
 
         # Execute workflow
         print("\nInitiating workflow...")

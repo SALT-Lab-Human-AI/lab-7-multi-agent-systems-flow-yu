@@ -138,20 +138,42 @@ def search_travel_costs(destination: str) -> str:
     """
 
 
+@tool
+def search_weather_forecast(destination: str, trip_dates: str) -> str:
+    """
+    Search for real weather forecasts and seasonal conditions.
+    Provides expected weather patterns, daylight hours, and packing tips.
+    """
+    search_query = f"{destination} weather forecast {trip_dates} temperature daylight"
+
+    return f"""
+    Research task: Provide a practical weather briefing for {destination} during {trip_dates}.
+
+    Please research and provide:
+    1. Typical temperatures (high/low) and precipitation likelihood
+    2. Sunrise/sunset times and daylight hours
+    3. Expected weather hazards or seasonal considerations
+    4. Packing recommendations (layers, footwear, gear)
+    5. Contingency advice for severe weather scenarios
+
+    Focus on data from reliable meteorological sources (Met Office, NOAA, local weather services).
+    """
+
+
 # ============================================================================
 # AGENT DEFINITIONS
 # ============================================================================
 
 def create_flight_agent(destination: str, trip_dates: str):
-    """Create the Flight Specialist agent with real research tools."""
     return Agent(
-        role="Flight Specialist",
+        role="Experienced Secretary in Travel Planning",
         goal=f"Research and recommend the best flight options for the {destination} trip "
              f"({trip_dates}), considering dates, airlines, prices, and flight durations. "
              f"Use real data from flight booking sites to provide accurate, current pricing.",
         backstory="You are an experienced flight specialist with deep knowledge of "
                   "airline schedules, pricing patterns, and travel routes. You excel at "
                   "finding the best flight options that balance cost and convenience. "
+                  "You have to put yourself in the traveler's shoes and understand their needs. "
                   "You have booked thousands of flights and know the best times to fly. "
                   "You always research current prices and use real booking site data.",
         tools=[search_flight_prices],
@@ -217,6 +239,21 @@ def create_budget_agent(destination: str):
                   "compromising the travel experience. You research actual current prices "
                   "and provide realistic budget estimates.",
         tools=[search_travel_costs],
+        verbose=True,
+        allow_delegation=False
+    )
+
+
+def create_weather_agent(destination: str, trip_dates: str):
+    """Create the Weather Advisor agent with real forecast research tools."""
+    return Agent(
+        role="Weather Advisor",
+        goal=f"Deliver accurate weather expectations for {destination} during {trip_dates}, "
+             f"highlighting temperature ranges, daylight hours, and packing guidance.",
+        backstory="You are a seasoned meteorologist who translates forecasts into actionable travel advice. "
+                  "You synthesize information from trusted weather agencies and provide clear recommendations "
+                  "so travelers can prepare for conditions on the ground.",
+        tools=[search_weather_forecast],
         verbose=True,
         allow_delegation=False
     )
@@ -304,6 +341,22 @@ def create_budget_task(budget_agent, destination: str, trip_duration: str):
     )
 
 
+def create_weather_task(weather_agent, destination: str, trip_dates: str):
+    """Define the weather preparedness task using real forecast data."""
+    return Task(
+        description=f"Research REAL weather expectations for {destination} during {trip_dates}. "
+                   f"Gather data on temperature ranges, precipitation patterns, daylight hours, "
+                   f"and any seasonal weather risks. Summarize how these conditions impact the "
+                   f"trip experience and provide specific packing recommendations to stay comfortable. "
+                   f"Advise on contingency plans for severe conditions and how weather might influence "
+                   f"the planned itinerary.",
+        agent=weather_agent,
+        expected_output=f"A concise weather briefing for {destination} covering temperatures, precipitation, "
+                       f"daylight, notable seasonal factors, and actionable packing plus contingency advice "
+                       f"tailored to the trip dates ({trip_dates})"
+    )
+
+
 # ============================================================================
 # CREW ORCHESTRATION
 # ============================================================================
@@ -361,16 +414,19 @@ def main(destination: str = "Iceland", trip_duration: str = "5 days",
     print()
 
     # Create agents with destination parameters
-    print("[1/4] Creating Flight Specialist Agent (researches real flights)...")
+    print("[1/5] Creating Flight Specialist Agent (researches real flights)...")
     flight_agent = create_flight_agent(destination, trip_dates)
 
-    print("[2/4] Creating Accommodation Specialist Agent (researches real hotels)...")
+    print("[2/5] Creating Accommodation Specialist Agent (researches real hotels)...")
     hotel_agent = create_hotel_agent(destination, trip_dates)
 
-    print("[3/4] Creating Travel Planner Agent (researches real attractions)...")
+    print("[3/5] Creating Travel Planner Agent (researches real attractions)...")
     itinerary_agent = create_itinerary_agent(destination, trip_duration)
 
-    print("[4/4] Creating Financial Advisor Agent (analyzes real costs)...")
+    print("[4/5] Creating Weather Advisor Agent (tracks real forecasts)...")
+    weather_agent = create_weather_agent(destination, trip_dates)
+
+    print("[5/5] Creating Financial Advisor Agent (analyzes real costs)...")
     budget_agent = create_budget_agent(destination)
 
     print("\n✅ All agents created successfully!")
@@ -381,6 +437,7 @@ def main(destination: str = "Iceland", trip_duration: str = "5 days",
     flight_task = create_flight_task(flight_agent, destination, trip_dates, departure_city)
     hotel_task = create_hotel_task(hotel_agent, destination, trip_dates)
     itinerary_task = create_itinerary_task(itinerary_agent, destination, trip_duration, trip_dates)
+    weather_task = create_weather_task(weather_agent, destination, trip_dates)
     budget_task = create_budget_task(budget_agent, destination, trip_duration)
 
     print("Tasks created successfully!")
@@ -388,12 +445,12 @@ def main(destination: str = "Iceland", trip_duration: str = "5 days",
 
     # Create the crew with sequential task execution
     print("Forming the Travel Planning Crew...")
-    print("Task Sequence: FlightAgent → HotelAgent → ItineraryAgent → BudgetAgent")
+    print("Task Sequence: FlightAgent → HotelAgent → ItineraryAgent → WeatherAgent → BudgetAgent")
     print()
 
     crew = Crew(
-        agents=[flight_agent, hotel_agent, itinerary_agent, budget_agent],
-        tasks=[flight_task, hotel_task, itinerary_task, budget_task],
+        agents=[flight_agent, hotel_agent, itinerary_agent, weather_agent, budget_agent],
+        tasks=[flight_task, hotel_task, itinerary_task, weather_task, budget_task],
         verbose=True,
         process="sequential"  # Sequential task execution
     )

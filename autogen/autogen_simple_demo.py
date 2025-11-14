@@ -51,6 +51,9 @@ class SimpleInterviewPlatformWorkflow:
         # Phase 4: Review
         self.phase_review()
 
+        # Phase 5: Go-To-Market Strategy
+        self.phase_go_to_market()
+
         # Summary
         self.print_summary()
 
@@ -173,6 +176,39 @@ Provide strategic review and recommendations."""
         print("\n[ReviewerAgent Output]")
         print(self.outputs["review"])
 
+    def phase_go_to_market(self):
+        """Phase 5: Go-To-Market Planning"""
+        print("\n" + "="*80)
+        print("PHASE 5: GO-TO-MARKET STRATEGY")
+        print("="*80)
+        print("[GoToMarketAgent is crafting the launch plan...]")
+
+        system_prompt = """You are a go-to-market strategist. Using the product blueprint and reviewer
+feedback, outline a 90-day launch plan including objectives, target segments, channel strategy,
+timeline, and success metrics in ~150 words."""
+
+        user_message = f"""Product Blueprint:
+{self.outputs['blueprint']}
+
+Reviewer Recommendations:
+{self.outputs['review']}
+
+Create a go-to-market plan."""
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            temperature=Config.AGENT_TEMPERATURE,
+            max_tokens=Config.AGENT_MAX_TOKENS,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ]
+        )
+
+        self.outputs["go_to_market"] = response.choices[0].message.content
+        print("\n[GoToMarketAgent Output]")
+        print(self.outputs["go_to_market"])
+
     def print_summary(self):
         """Print final summary"""
         print("\n" + "="*80)
@@ -180,11 +216,12 @@ Provide strategic review and recommendations."""
         print("="*80)
 
         print("""
-This workflow demonstrated a 4-agent collaboration:
+This workflow demonstrated a 5-agent collaboration:
 1. ResearchAgent - Analyzed the market
 2. AnalysisAgent - Identified opportunities
 3. BlueprintAgent - Designed the product
 4. ReviewerAgent - Provided strategic recommendations
+5. GoToMarketAgent - Built the launch plan
 
 Each agent received context from the previous agent's output,
 demonstrating the sequential workflow pattern of AutoGen.
@@ -215,6 +252,11 @@ demonstrating the sequential workflow pattern of AutoGen.
         print("-"*80)
         print(self.outputs["review"])
 
+        print("\n" + "-"*80)
+        print("PHASE 5: GO-TO-MARKET STRATEGY (Full Output)")
+        print("-"*80)
+        print(self.outputs["go_to_market"])
+
         # Save to file
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_file = f"workflow_outputs_{timestamp}.txt"
@@ -244,6 +286,11 @@ demonstrating the sequential workflow pattern of AutoGen.
             f.write("PHASE 4: STRATEGIC REVIEW\n")
             f.write("-"*80 + "\n")
             f.write(self.outputs["review"] + "\n")
+
+            f.write("\n" + "-"*80 + "\n")
+            f.write("PHASE 5: GO-TO-MARKET STRATEGY\n")
+            f.write("-"*80 + "\n")
+            f.write(self.outputs["go_to_market"] + "\n")
         
         print(f"\n💾 Full results saved to: {output_file}")
 
